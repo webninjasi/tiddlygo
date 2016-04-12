@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf8">
+	<title>TiddlyGo Server {{.Version}}</title>
+	<style>
+	body {
+		background-color: #A7DBD8;
+	}
+	</style>
+</head>
+<body>
+	<div class="wrapper">
+		<ul>
+			{{range $i, $page := .Pages}}
+			<li><a href="{{$page.Url}}">{{$page.Name}}</a></li>
+			{{end}}
+		</ul>
+	</div>
+</body>
+</html>
