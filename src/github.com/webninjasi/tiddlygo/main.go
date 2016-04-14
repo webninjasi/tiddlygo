@@ -30,7 +30,7 @@ type Page struct {
 }
 
 var cfg = NewConfig()
-var indexTpl = template.Must(template.ParseFiles("templates/index.html"))
+var indexTpl = template.Must(template.ParseFiles("www/index.html"))
 
 var flagVersion = flag.Bool("v", false, "Show current version")
 
@@ -47,8 +47,9 @@ func main() {
 
 	router := mux.NewRouter()
 	router.HandleFunc("/", index).Methods("GET")
-	router.HandleFunc("/{wikiname:\\w+\\.html}", viewWiki).Methods("GET")
 	router.HandleFunc("/store", storeWiki).Methods("POST")
+	router.HandleFunc("/{wikiname:\\w+\\.html}", viewWiki).Methods("GET")
+	router.PathPrefix("/").Handler(http.FileServer(http.Dir("./www/")))
 
 	log.Println("Listening the server on", cfg.Address)
 
