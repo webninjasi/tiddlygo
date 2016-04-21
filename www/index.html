@@ -24,15 +24,48 @@
 <body>
 	<div class="container">
 		<div class="page-header">
-			<h1>TiddlyGo Server v{{.Version}}</h1>
+			<h1>TiddlyGo Server</h1>
 		</div>
 
 		<div class="row">
 			<div class="col-xs-12">
 				<div class="list-group">
-					{{range $i, $page := .Pages}}
-					<a href="{{$page.Url}}" class="list-group-item">{{$page.Name}}</a>
-					{{end}}
+					<li class="list-group-item active btn" data-toggle="modal"
+						data-target="#newWiki">Add New TiddlyWiki</li>
+					<div class="page-list"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Modal -->
+	<div id="newWiki" class="modal fade" role="dialog">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal">&times;</button>
+					<h4 class="modal-title">Add New Wiki</h4>
+				</div>
+
+				<div class="modal-body">
+					<div id="newWikiOutput"></div>
+
+					<form role="form" action="/new" method="POST"
+						data-target="#newWikiOutput" data-live>
+						<div class="form-group">
+							<label for="wikiname">Wiki Name:</label> <input type="text"
+								class="form-control" id="wikiname" name="wikiname">
+						</div>
+						<div class="form-group">
+							<label for="wikititle">Wiki Title:</label> <input type="text"
+								class="form-control" id="wikititle" name="wikititle">
+						</div>
+						<button type="submit" class="btn btn-default">Submit</button>
+					</form>
+				</div>
+
+				<div class="modal-footer">
+					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 				</div>
 			</div>
 		</div>
@@ -42,6 +75,9 @@
 		src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 	<script
 		src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
-	<script src="/script.js"></script>
+	<script src="js/doT.min.js"></script>
+
+	<script src="js/templates.js"></script>
+	<script src="js/script.js"></script>
 </body>
 </html>

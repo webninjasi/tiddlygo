@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -19,14 +20,13 @@ const c_configFile = "tiddlygo.json"
 const c_maxFileSize = 32 << 20
 const c_version = "1.0.0"
 
-type IndexData struct {
-	Pages   []Page
-	Version string
+type WikiList struct {
+	Pages []Page `json:"pages"`
 }
 
 type Page struct {
-	Url  string
-	Name string
+	Url  string `json:"url"`
+	Name string `json:"name"`
 }
 
 var cfg = NewConfig()
@@ -47,7 +47,9 @@ func main() {
 
 	router := mux.NewRouter()
 	router.HandleFunc("/", index).Methods("GET")
+	router.HandleFunc("/wikilist", listWiki).Methods("GET")
 	router.HandleFunc("/store", storeWiki).Methods("POST")
+	router.HandleFunc("/new", newWiki).Methods("POST")
 	router.HandleFunc("/{wikiname:\\w+\\.html}", viewWiki).Methods("GET")
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir("./www/")))
 
@@ -60,14 +62,17 @@ func main() {
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "www/index.html")
+}
+
+func listWiki(w http.ResponseWriter, r *http.Request) {
 	files, err := ioutil.ReadDir(cfg.WikiDir + "/")
 	if err != nil {
 		return
 	}
 
-	data := IndexData{
-		Pages:   []Page{},
-		Version: c_version,
+	data := WikiList{
+		Pages: []Page{},
 	}
 
 	for _, f := range files {
@@ -80,12 +85,12 @@ func index(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = indexTpl.Execute(w, data)
+	byt, err := json.Marshal(data)
 	if err != nil {
-		fmt.Fprintf(w, `Template error`)
-		log.Println(err)
 		return
 	}
+
+	w.Write(byt)
 }
 
 func viewWiki(w http.ResponseWriter, r *http.Request) {
@@ -178,4 +183,33 @@ func storeWiki(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "0 - File successfully loaded in '%v'\n", wikiname)
 	log.Printf("Successfully uploaded: '%v'\n", wikiname)
+}
+
+func newWiki(w http.ResponseWriter, r *http.Request) {
+	wikiname := r.FormValue("wikiname")
+
+	match, err := regexp.MatchString(`^\w+$`, wikiname)
+	if !match || err != nil {
+		log.Println(wikiname)
+		log.Println(err)
+		http.Error(w, "Invalid file name!", http.StatusBadRequest)
+		return
+	}
+
+	wikiname = wikiname + ".html"
+	wikipath := filepath.Join(cfg.WikiDir, wikiname)
+
+	if isExist(wikipath) {
+		http.Error(w, "It already exists!", http.StatusBadRequest)
+		return
+	}
+
+	err = downloadFile(wikipath, "http://tiddlywiki.com/empty.html")
+	if err != nil {
+		http.Error(w, "Couldn't download an empty wiki!", http.StatusInternalServerError)
+		log.Println("Error while downloading empty wiki:", err)
+		return
+	}
+
+	fmt.Fprintf(w, "Success!")
 }
