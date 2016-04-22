@@ -96,6 +96,12 @@ func listWiki(w http.ResponseWriter, r *http.Request) {
 func viewWiki(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	wikiname := params["wikiname"]
+
+	// Disable Caching
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
+
 	http.ServeFile(w, r, filepath.Join(cfg.WikiDir, wikiname))
 }
 
