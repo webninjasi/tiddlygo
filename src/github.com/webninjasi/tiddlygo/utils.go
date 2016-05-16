@@ -51,3 +51,17 @@ func downloadFile(filepath string, url string) (err error) {
 
 	return nil
 }
+
+func toHttpAddr(addr string) string {
+	addr_parts := strings.SplitN(addr, ":", 2)
+
+	if addr_parts[0] == "" {
+		addr_parts[0] = "127.0.0.1"
+	}
+
+	if addr_parts[1] == "" {
+		return "http://" + addr_parts[0]
+	}
+
+	return "http://" + addr_parts[0] + ":" + addr_parts[1]
+}

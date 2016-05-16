@@ -10,8 +10,10 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"text/template"
 
+	"github.com/cratonica/trayhost"
 	"github.com/gorilla/mux"
 )
 
@@ -32,6 +34,9 @@ var evtHandler = EventHandler{}
 var indexTpl = template.Must(template.ParseFiles("www/index.html"))
 
 func main() {
+	// EnterLoop must be called on the OS's main thread
+	runtime.LockOSThread()
+
 	err := cfg.ReadFile(c_configFile)
 	if err != nil && !os.IsNotExist(err) {
 		log.Fatalln("Error while reading config file:", err)
@@ -39,6 +44,22 @@ func main() {
 
 	evtHandler.Parse(cfg.Events)
 
+	router := getRouter()
+
+	go func() {
+		log.Println("Listening the server on", cfg.Address)
+
+		err := http.ListenAndServe(cfg.Address, router)
+		if err != nil {
+			log.Fatalln("Error while listening server:", err)
+		}
+	}()
+
+	trayhost.SetUrl(toHttpAddr(cfg.Address))
+	trayhost.EnterLoop("TiddlyGo", iconData)
+}
+
+func getRouter() *mux.Router {
 	router := mux.NewRouter()
 	router.HandleFunc("/", index).Methods("GET")
 	router.HandleFunc("/wikilist", listWiki).Methods("GET")
@@ -47,12 +68,7 @@ func main() {
 	router.HandleFunc("/{wikiname:\\w+\\.html}", viewWiki).Methods("GET")
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir("./www/")))
 
-	log.Println("Listening the server on", cfg.Address)
-
-	err = http.ListenAndServe(cfg.Address, router)
-	if err != nil {
-		log.Fatalln("Error while listening server:", err)
-	}
+	return router
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
