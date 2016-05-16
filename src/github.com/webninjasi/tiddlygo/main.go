@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -18,7 +17,6 @@ import (
 
 const c_configFile = "tiddlygo.json"
 const c_maxFileSize = 32 << 20
-const c_version = "1.0.0"
 
 type WikiList struct {
 	Pages []Page `json:"pages"`
@@ -30,20 +28,16 @@ type Page struct {
 }
 
 var cfg = NewConfig()
+var evtHandler = EventHandler{}
 var indexTpl = template.Must(template.ParseFiles("www/index.html"))
 
-var flagVersion = flag.Bool("v", false, "Show current version")
-
 func main() {
-	if *flagVersion {
-		fmt.Println("TiddlyGo v" + c_version)
-		return
-	}
-
 	err := cfg.ReadFile(c_configFile)
 	if err != nil && !os.IsNotExist(err) {
 		log.Fatalln("Error while reading config file:", err)
 	}
+
+	evtHandler.Parse(cfg.Events)
 
 	router := mux.NewRouter()
 	router.HandleFunc("/", index).Methods("GET")
@@ -180,12 +174,16 @@ func storeWiki(w http.ResponseWriter, r *http.Request) {
 	}
 	defer downloadf.Close()
 
+	evtHandler.Handle("prestore", wikiname)
+
 	_, err = io.Copy(downloadf, uploadf)
 	if err != nil {
 		fmt.Fprintln(w, "Couldn't upload the file!")
 		log.Printf("Error while copying to '%v': %v\n", wikipath, err)
 		return
 	}
+
+	evtHandler.Handle("poststore", wikiname)
 
 	fmt.Fprintf(w, "0 - File successfully loaded in '%v'\n", wikiname)
 	log.Printf("Successfully uploaded: '%v'\n", wikiname)

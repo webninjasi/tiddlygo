@@ -6,10 +6,11 @@ import (
 )
 
 type Config struct {
-	Address  string `json:"address"`
-	WikiDir  string `json:"wikidir"`
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Address  string   `json:"address"`
+	WikiDir  string   `json:"wikidir"`
+	Username string   `json:"username"`
+	Password string   `json:"password"`
+	Events   EventMap `json:"events"`
 }
 
 func (cfg *Config) ReadFile(filename string) error {
@@ -31,5 +32,6 @@ func NewConfig() *Config {
 		WikiDir:  "wikidir",
 		Username: "tiddlygo",
 		Password: "tiddlygo",
+		Events:   EventMap{},
 	}
 }
