@@ -65,3 +65,14 @@ func toHttpAddr(addr string) string {
 
 	return "http://" + addr_parts[0] + ":" + addr_parts[1]
 }
+
+func checkWikiDir() error {
+	if !isExist(cfg.WikiDir) {
+		err := os.MkdirAll(cfg.WikiDir, 0644)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

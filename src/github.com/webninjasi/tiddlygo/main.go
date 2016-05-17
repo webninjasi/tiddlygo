@@ -173,13 +173,11 @@ func storeWiki(w http.ResponseWriter, r *http.Request) {
 
 	wikipath := filepath.Join(cfg.WikiDir, wikiname)
 
-	if !isExist(cfg.WikiDir) {
-		err := os.MkdirAll(cfg.WikiDir, 0644)
-		if err != nil {
-			fmt.Fprintln(w, "Couldn't upload the file!")
-			log.Printf("Error while creating '%v': %v\n", cfg.WikiDir, err)
-			return
-		}
+	err = checkWikiDir()
+	if err != nil {
+		fmt.Fprintln(w, "Couldn't upload the file!")
+		log.Printf("Error while creating '%v': %v\n", cfg.WikiDir, err)
+		return
 	}
 
 	downloadf, err := os.OpenFile(wikipath, os.O_WRONLY|os.O_CREATE, 0644)
@@ -221,6 +219,13 @@ func newWiki(w http.ResponseWriter, r *http.Request) {
 
 	if isExist(wikipath) {
 		http.Error(w, "It already exists!", http.StatusBadRequest)
+		return
+	}
+
+	err = checkWikiDir()
+	if err != nil {
+		fmt.Fprintln(w, "Couldn't download an empty wiki!")
+		log.Printf("Error while creating '%v': %v\n", cfg.WikiDir, err)
 		return
 	}
 
