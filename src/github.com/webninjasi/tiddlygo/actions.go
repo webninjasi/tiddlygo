@@ -28,7 +28,8 @@ func (this EventAction) Do(args ...string) error {
 }
 
 func (this EventAction) CombineArgs(args []string) []string {
-	combined := this.data
+	combined := make([]string, len(this.data))
+	copy(combined, this.data)
 
 	for idx, dat := range this.data {
 		if len(dat) >= 2 && strings.Index(dat, "$") == 0 {
