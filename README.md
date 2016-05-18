@@ -47,13 +47,15 @@ Config
 
 Config file (tiddlygo.json) should be inside the working directory.
 
-| Key      | Description                              | Default  |
-|----------|------------------------------------------|----------|
-| Address  | Server address                           | :8080    |
-| WikiDir  | Folder to store wiki files               | wikidir  |
-| Username | Username to use on store request         | tiddlygo |
-| Password | Password to use on store request         | tiddlygo |
-| Events   | A js object to define actions for events |          |
+| Key         | Description                              | Default   |
+|-------------|------------------------------------------|-----------|
+| address     | Server address                           | :8080     |
+| wikidir     | Path to store wiki files                 | wikidir   |
+| templatedir | Path to find templates                   | templates |
+| publicdir   | Path for static web files                | www       |
+| username    | Username to use on store request         | tiddlygo  |
+| password    | Password to use on store request         | tiddlygo  |
+| events      | A js object to define actions for events |           |
 
 Valid events:
 
@@ -75,7 +77,7 @@ You can use event args in action parameters (`$0` = first arg):
 [ "git", "add", "$0" ]
 ```
 
-#### Examples
+### Examples
 
 Set username and password:
 

@@ -1,0 +1,12 @@
+{
+	"address": ":8080",
+	"wikidir": "wikidir",
+	"templatedir": "templates",
+	"publicdir": "www",
+	"username": "tiddlygo",
+	"password": "tiddlygo",
+	"events": 
+	{
+		
+	}
+}
