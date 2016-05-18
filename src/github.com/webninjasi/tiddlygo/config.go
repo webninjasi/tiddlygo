@@ -6,11 +6,13 @@ import (
 )
 
 type Config struct {
-	Address  string   `json:"address"`
-	WikiDir  string   `json:"wikidir"`
-	Username string   `json:"username"`
-	Password string   `json:"password"`
-	Events   EventMap `json:"events"`
+	Address     string   `json:"address"`
+	WikiDir     string   `json:"wikidir"`
+	TemplateDir string   `json:"templatedir"`
+	PublicDir   string   `json:"publicdir"`
+	Username    string   `json:"username"`
+	Password    string   `json:"password"`
+	Events      EventMap `json:"events"`
 }
 
 func (cfg *Config) ReadFile(filename string) error {
@@ -28,10 +30,12 @@ func (cfg *Config) ReadFile(filename string) error {
 
 func NewConfig() *Config {
 	return &Config{
-		Address:  ":8080",
-		WikiDir:  "wikidir",
-		Username: "tiddlygo",
-		Password: "tiddlygo",
-		Events:   EventMap{},
+		Address:     ":8080",
+		WikiDir:     "wikidir",
+		TemplateDir: "templates",
+		PublicDir:   "www",
+		Username:    "tiddlygo",
+		Password:    "tiddlygo",
+		Events:      EventMap{},
 	}
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,7 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"text/template"
+	"strings"
 
 	"github.com/cratonica/trayhost"
 	"github.com/gorilla/mux"
@@ -29,9 +30,15 @@ type Page struct {
 	Name string `json:"name"`
 }
 
+type WikiTemplate struct {
+	Id       string `json:"id"`
+	Name     string `json:"name"`
+	Selected bool   `json:"selected"`
+}
+
 var cfg = NewConfig()
 var evtHandler = EventHandler{}
-var indexTpl = template.Must(template.ParseFiles("www/index.html"))
+var serverURL string
 
 func main() {
 	// EnterLoop must be called on the OS's main thread
@@ -55,7 +62,9 @@ func main() {
 		}
 	}()
 
-	trayhost.SetUrl(toHttpAddr(cfg.Address))
+	serverURL = toHttpAddr(cfg.Address)
+
+	trayhost.SetUrl(serverURL)
 	trayhost.EnterLoop("TiddlyGo", iconData)
 }
 
@@ -63,16 +72,17 @@ func getRouter() *mux.Router {
 	router := mux.NewRouter()
 	router.HandleFunc("/", index).Methods("GET")
 	router.HandleFunc("/wikilist", listWiki).Methods("GET")
+	router.HandleFunc("/wikitemplates", listWikiTemplates).Methods("GET")
 	router.HandleFunc("/store", storeWiki).Methods("POST")
 	router.HandleFunc("/new", newWiki).Methods("POST")
 	router.HandleFunc("/{wikiname:\\w+\\.html}", viewWiki).Methods("GET")
-	router.PathPrefix("/").Handler(http.FileServer(http.Dir("./www/")))
+	router.PathPrefix("/").Handler(http.FileServer(http.Dir(cfg.PublicDir)))
 
 	return router
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "www/index.html")
+	http.ServeFile(w, r, cfg.PublicDir+"/index.html")
 }
 
 func listWiki(w http.ResponseWriter, r *http.Request) {
@@ -91,6 +101,38 @@ func listWiki(w http.ResponseWriter, r *http.Request) {
 			data.Pages = append(data.Pages, Page{
 				Url:  "/" + name,
 				Name: name,
+			})
+		}
+	}
+
+	byt, err := json.Marshal(data)
+	if err != nil {
+		return
+	}
+
+	w.Write(byt)
+}
+
+func listWikiTemplates(w http.ResponseWriter, r *http.Request) {
+	files, err := ioutil.ReadDir(cfg.TemplateDir)
+	if err != nil {
+		return
+	}
+
+	data := []WikiTemplate{
+		WikiTemplate{
+			Id:   "Latest",
+			Name: "Latest",
+		},
+	}
+
+	for i, f := range files {
+		name := f.Name()
+		if len(name) > 5 && name[len(name)-5:] == ".html" && name != "Latest" {
+			data = append(data, WikiTemplate{
+				Id:       name,
+				Name:     name,
+				Selected: i == 0,
 			})
 		}
 	}
@@ -205,11 +247,10 @@ func storeWiki(w http.ResponseWriter, r *http.Request) {
 
 func newWiki(w http.ResponseWriter, r *http.Request) {
 	wikiname := r.FormValue("wikiname")
+	wikitemplate := r.FormValue("wikitemplate")
 
 	match, err := regexp.MatchString(`^\w+$`, wikiname)
 	if !match || err != nil {
-		log.Println(wikiname)
-		log.Println(err)
 		http.Error(w, "Invalid file name!", http.StatusBadRequest)
 		return
 	}
@@ -224,17 +265,80 @@ func newWiki(w http.ResponseWriter, r *http.Request) {
 
 	err = checkWikiDir()
 	if err != nil {
-		fmt.Fprintln(w, "Couldn't download an empty wiki!")
+		fmt.Fprintln(w, "Couldn't create the wiki!")
 		log.Printf("Error while creating '%v': %v\n", cfg.WikiDir, err)
 		return
 	}
 
-	err = downloadFile(wikipath, "http://tiddlywiki.com/empty.html")
+	if wikitemplate == "Latest" {
+		err = downloadFile(wikipath, "http://tiddlywiki.com/empty.html")
+		if err != nil {
+			http.Error(w, "Couldn't download an empty wiki!", http.StatusInternalServerError)
+			log.Println("Error while downloading empty wiki:", err)
+			return
+		}
+
+		fmt.Fprintf(w, "Success!")
+		return
+	}
+
+	wikititle := r.FormValue("wikititle")
+
+	err = renderTemplate(wikitemplate, wikiname, wikititle)
 	if err != nil {
-		http.Error(w, "Couldn't download an empty wiki!", http.StatusInternalServerError)
-		log.Println("Error while downloading empty wiki:", err)
+		http.Error(w, "Couldn't render the template!", http.StatusInternalServerError)
+		log.Println("Error while rendering the template:", err)
 		return
 	}
 
 	fmt.Fprintf(w, "Success!")
+}
+
+func renderTemplate(wikitemplate string, wikiname string, wikititle string) error {
+	// Open template file
+	tplpath := filepath.Join(cfg.TemplateDir, wikitemplate)
+	tplf, err := os.Open(tplpath)
+	if err != nil {
+		return err
+	}
+	defer tplf.Close()
+
+	r := bufio.NewReader(tplf)
+
+	// Open wiki file
+	wikipath := filepath.Join(cfg.WikiDir, wikiname)
+	wikif, err := os.Create(wikipath)
+	if err != nil {
+		return err
+	}
+	defer wikif.Close()
+
+	w := bufio.NewWriter(wikif)
+
+	for {
+		// read a line
+		line, err := r.ReadString('\n')
+		if err != nil && err != io.EOF {
+			return err
+		}
+		if len(line) == 0 {
+			break
+		}
+
+		line = strings.Replace(line, "<!--## Title ##-->", wikititle, -1)
+		line = strings.Replace(line, "<!--## Wikiname ##-->", wikiname, -1)
+		line = strings.Replace(line, "<!--## Username ##-->", cfg.Username, -1)
+		line = strings.Replace(line, "<!--## StoreURL ##-->", serverURL+"/store", -1)
+
+		// write a line
+		if _, err := w.WriteString(line); err != nil {
+			return err
+		}
+	}
+
+	if err = w.Flush(); err != nil {
+		return err
+	}
+
+	return nil
 }

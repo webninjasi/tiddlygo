@@ -1,4 +1,5 @@
 updateWikiList();
+updateTemplateList();
 
 $('form[data-live]').on('submit', function(event) {
 	var $form = $(this);
@@ -28,5 +29,11 @@ $('form[data-live]').on('submit', function(event) {
 function updateWikiList() {
 	$.getJSON("/wikilist", function(data) {
 		$(".page-list").html(tplPageList(data));
+	});
+}
+
+function updateTemplateList() {
+	$.getJSON("/wikitemplates", function(data) {
+		$("#wikitemplate").html(tplWikiTemplates(data));
 	});
 }
