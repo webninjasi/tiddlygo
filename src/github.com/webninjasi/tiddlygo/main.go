@@ -197,13 +197,13 @@ func storeWiki(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	uploadf, handler, err := r.FormFile("userfile")
+	inp, handler, err := r.FormFile("userfile")
 	if err != nil {
 		fmt.Fprintln(w, "Couldn't upload the file!")
 		log.Println("Error while handling 'userfile':", err)
 		return
 	}
-	defer uploadf.Close()
+	defer inp.Close()
 
 	wikiname := filepath.Base(handler.Filename)
 
@@ -222,20 +222,27 @@ func storeWiki(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	downloadf, err := os.OpenFile(wikipath, os.O_WRONLY|os.O_CREATE, 0644)
+	out, err := os.Create(wikipath)
 	if err != nil {
 		fmt.Fprintln(w, "Couldn't upload the file!")
-		log.Printf("Error while opening '%v': %v\n", wikipath, err)
+		log.Printf("Error while creating '%v': %v\n", wikipath, err)
 		return
 	}
-	defer downloadf.Close()
+	defer out.Close()
 
 	evtHandler.Handle("prestore", wikiname)
 
-	_, err = io.Copy(downloadf, uploadf)
+	_, err = io.Copy(out, inp)
 	if err != nil {
 		fmt.Fprintln(w, "Couldn't upload the file!")
 		log.Printf("Error while copying to '%v': %v\n", wikipath, err)
+		return
+	}
+
+	err = out.Sync()
+	if err != nil {
+		fmt.Fprintln(w, "Couldn't upload the file!")
+		log.Printf("Error while syncing '%v': %v\n", wikipath, err)
 		return
 	}
 
